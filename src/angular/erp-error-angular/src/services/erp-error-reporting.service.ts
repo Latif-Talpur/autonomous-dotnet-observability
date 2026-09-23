@@ -19,7 +19,7 @@ export class ErpErrorReportingService {
 
   reportHttpError(error: HttpErrorResponse, url: string): void {
     if (this.wasRecent(url)) return;
-    const payload = this.buildPayload(error, 'HTTP');
+    const payload = this.buildPayload(error, 'Angular');
     payload.httpStatus = error.status;
     payload.url = url;
     this.send(payload);

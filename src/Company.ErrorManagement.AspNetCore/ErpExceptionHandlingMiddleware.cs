@@ -37,36 +37,53 @@ namespace Company.ErrorManagement.AspNetCore
             {
                 _logger.LogError(ex, "Unhandled exception on {Method} {Path}", context.Request.Method, context.Request.Path);
 
-                var envelope = ErrorNormalizer.FromException(ex, ErrorLayer.AspNetCore);
-                envelope.ApplicationCode = _options.ApplicationName;
-                envelope.EnvironmentCode = _options.EnvironmentName;
-                envelope.ApplicationVersion = _options.ApplicationVersion;
-                envelope.CorrelationId = correlation.CorrelationId ?? Guid.NewGuid().ToString("N");
-                envelope.UserId = correlation.UserId;
-                envelope.Endpoint = context.Request.Path;
-                envelope.HttpStatus = 500;
-
-                var routeValues = context.GetRouteData()?.Values;
-                if (routeValues != null)
-                {
-                    envelope.Controller = routeValues.TryGetValue("controller", out var c) ? c?.ToString() : null;
-                    envelope.Action = routeValues.TryGetValue("action", out var a) ? a?.ToString() : null;
-                }
-
+                var correlationId = correlation.CorrelationId ?? Guid.NewGuid().ToString("N");
                 ErrorReceipt receipt;
-                try
+
+                if (ex.Data.Contains("erp:capturing"))
                 {
-                    receipt = await reporter.CaptureAsync(envelope, context.RequestAborted);
-                }
-                catch (Exception reportingException)
-                {
-                    _logger.LogError(reportingException, "Error reporting itself failed");
+                    // The EF Core interceptor already stamped this exception and is capturing it
+                    // asynchronously.  Skip a second capture to prevent duplicate occurrence records.
                     receipt = new ErrorReceipt
                     {
                         ErrorReference = "ERR-UNKNOWN",
-                        CorrelationId = envelope.CorrelationId,
-                        Persisted = false
+                        CorrelationId = correlationId,
+                        Persisted = false,
+                        CanReportIssue = false
                     };
+                }
+                else
+                {
+                    var envelope = ErrorNormalizer.FromException(ex, ErrorLayer.AspNetCore);
+                    envelope.ApplicationCode = _options.ApplicationName;
+                    envelope.EnvironmentCode = _options.EnvironmentName;
+                    envelope.ApplicationVersion = _options.ApplicationVersion;
+                    envelope.CorrelationId = correlationId;
+                    envelope.UserId = correlation.UserId;
+                    envelope.Endpoint = context.Request.Path;
+                    envelope.HttpStatus = 500;
+
+                    var routeValues = context.GetRouteData()?.Values;
+                    if (routeValues != null)
+                    {
+                        envelope.Controller = routeValues.TryGetValue("controller", out var c) ? c?.ToString() : null;
+                        envelope.Action = routeValues.TryGetValue("action", out var a) ? a?.ToString() : null;
+                    }
+
+                    try
+                    {
+                        receipt = await reporter.CaptureAsync(envelope, context.RequestAborted);
+                    }
+                    catch (Exception reportingException)
+                    {
+                        _logger.LogError(reportingException, "Error reporting itself failed");
+                        receipt = new ErrorReceipt
+                        {
+                            ErrorReference = "ERR-UNKNOWN",
+                            CorrelationId = correlationId,
+                            Persisted = false
+                        };
+                    }
                 }
 
                 if (!context.Response.HasStarted)

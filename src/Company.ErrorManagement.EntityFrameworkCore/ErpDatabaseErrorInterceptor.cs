@@ -33,12 +33,16 @@ namespace Company.ErrorManagement.EntityFrameworkCore
 
         public override void CommandFailed(DbCommand command, CommandErrorEventData eventData)
         {
+            // Stamp before the async call so the ASP.NET Core exception middleware can see it
+            // synchronously and skip its own capture, preventing a double occurrence record.
+            eventData.Exception.Data["erp:capturing"] = true;
             _ = CaptureAsync(command, eventData.Exception, CancellationToken.None);
             base.CommandFailed(command, eventData);
         }
 
         public override Task CommandFailedAsync(DbCommand command, CommandErrorEventData eventData, CancellationToken cancellationToken = default)
         {
+            eventData.Exception.Data["erp:capturing"] = true;
             _ = CaptureAsync(command, eventData.Exception, cancellationToken);
             return base.CommandFailedAsync(command, eventData, cancellationToken);
         }

@@ -2,7 +2,7 @@
 
 This page compares the current repository with [the original framework proposal](./02_Dynamic%20Enterprise%20Error%20Management%20and%20Ticketing%20Framework_V2%20(1).docx) and [the implementation plan](./03_Implementation_Architecture_and_Delivery_Plan.md). It describes a deployment in which an existing ERP application reports errors to a central service and support staff use a separate administration UI.
 
-Review basis: source inspected on 23 September 2026 (Git tree `378b8fa4af42b16ab9908564d9ddb189474b77aa`). This is a source review; the applications were not built or run during this review. Later commits may change the status described below.
+Review basis: source inspected on 23 September 2026 (Git tree `378b8fa4af42b16ab9908564d9ddb189474b77aa`). Phase 1 foundation fixes applied; see *Phase 1 changes* section below.
 
 **Status:** foundation implemented; the complete environment below is a target architecture. The repository contains one deployable application today: `Company.ErrorManagement.IngestionService`. The Angular and .NET adapters are reusable libraries. It does not contain an ERP host application, Admin UI application, or monitoring agent.
 
@@ -65,13 +65,26 @@ flowchart TB
 | Resilience with local logging, durable spool, and replay | Error reporter catches its own failures; host logging remains outside this library | Durable delivery, replay, and circuit breaker missing |
 | Administrative security and safe production deployment | Redaction code exists; API startup has no visible authentication or role authorization | Production security work pending |
 
-### Design choices to reconcile
+### Design decisions
 
-- The original document's first deployment uses an **embedded library with a separate SQL Server database**; remote ingestion is described as a later option. The README and installation guide now present a **central .NET 8 service with SQLite**. The diagram follows the central-service direction requested for this environment. Update the older proposal or add a formal decision record before treating these as one agreed deployment design.
-- `Company.ErrorManagement.Persistence.Sqlite` currently registers `DirectSqlErrorTransport`. Implement an HTTP transport for Web API 2 and .NET 8 hosts, with bounded delivery and idempotent replay, before saying all ERP instances report centrally.
-- The Angular reporting service sends a string `layer` value, while the central endpoint binds a .NET enum with default JSON settings. Verify and align the request contract before routing the Angular library directly to the central endpoint.
-- `event_id` is unique on occurrences, but `ErrorRepository.UpsertAsync` increments the definition count before it attempts the occurrence insert. A retried event can therefore inflate `occurrence_count` even when the unique constraint prevents another occurrence; correct this before relying on frequency reports.
+**Database for first deployment — SQLite (decided Phase 1):** The initial deployment runs a single `Company.ErrorManagement.IngestionService` instance that owns the SQLite database. Only that process reads or writes the database file; ERP adapters must send errors over HTTP, not by sharing the file. SQL Server support is deferred until multiple ingestion replicas are required (see Phase 12).
+
+**Central service architecture (decided Phase 1):** The agreed deployment model is a central .NET 8 service with SQLite. The original proposal's embedded-library-with-SQL-Server approach is superseded. The older `.docx` proposal describes an earlier iteration; this document is authoritative for the current direction.
+
+### Remaining design choices to reconcile
+
+- `Company.ErrorManagement.Persistence.Sqlite` currently registers `DirectSqlErrorTransport`. Implement an HTTP transport for Web API 2 and .NET 8 hosts, with bounded delivery and idempotent replay, before saying all ERP instances report centrally. (Phase 2)
 - The Admin UI, role-protected technical views, monitoring agent, diagnostic artifact store, and recovery control plane are still future work. The metadata migration alone does not make those features operational.
+
+### Phase 1 changes
+
+The following issues from the original "Design choices to reconcile" section were resolved:
+
+| Issue | Fix applied |
+|---|---|
+| `occurrence_count` incremented before occurrence INSERT | `ErrorRepository.UpsertAsync` now increments the count only after the occurrence INSERT succeeds, inside the same transaction. |
+| Angular `layer` string vs C# enum | `JsonStringEnumConverter` added globally in `Program.cs`; Angular service changed to send `'Angular'` for HTTP interceptor errors (the only valid client-side layer). The `/client-errors` endpoint overwrite of `ErrorLayer.Angular` is retained as a safety net. |
+| EF Core interceptor and API middleware double-recording | `ErpDatabaseErrorInterceptor` stamps `exception.Data["erp:capturing"] = true` before its fire-and-forget capture. `ErpExceptionHandlingMiddleware` skips its own capture when it sees that stamp, preventing two occurrence records for the same database exception. |
 
 ## Source map
 
