@@ -4,7 +4,7 @@ The target is a central ingestion service used by monitored ERP applications, wi
 
 ## Phase 1: Foundation (in progress)
 
-This increment fixes replay handling in SQLite: the same event ID returns the stored receipt without incrementing counts. Event IDs are globally unique; a replay with a different application, environment, or tenant is rejected. Other constraint failures roll back the whole write. Regression tests cover replay, concurrent replay, distinct events, scope conflicts, and rollback. Windows CI builds/tests the solution, including the legacy Web API project.
+This increment fixes replay handling in SQLite: the same event ID returns the stored receipt without incrementing counts. Event IDs are globally unique; a replay with a different application, environment, or tenant is rejected. Other constraint failures roll back the whole write. Regression tests cover replay, concurrent replay, distinct events, scope conflicts, and rollback. A manual Windows CI workflow is available for the later testing phase. Testing is deferred at the user's request.
 
 Still required before this phase is complete:
 - Finalize API/client JSON contracts and validate ingestion payloads.
@@ -16,7 +16,7 @@ Still required before this phase is complete:
 
 | Phase | Work | Exit criteria |
 |---|---|---|
-| 2 | HTTP transport, bounded queue, durable spool, retry/backoff and replay | Ingestion outage does not break business requests; recovery replays without duplicates |
+| 2 (started) | Direct HTTP transport and bounded retry implemented; bounded queue, durable spool, circuit breaker and replay remain | Ingestion outage does not break business requests; recovery replays without duplicates |
 | 3 | Application registration, credentials, admin authentication and roles | Ingestion and admin routes enforce separate permissions and scope |
 | 4 | ASP.NET Core, Web API 2 and EF adapter integration | Sample applications correlate and capture failures end to end |
 | 5 | Angular error reporting, notifications and issue submission | Client and HTTP failures report once; reporting failure cannot recurse |
@@ -28,4 +28,4 @@ Still required before this phase is complete:
 | 11 | Guarded recovery with approvals and execution audit | Allowlisted actions enforce approval, limits and cooldowns |
 | 12 | Packaging, deployment and acceptance testing | Documented install, upgrade, restore and end-to-end checks pass |
 
-Admin UI, monitoring agent, diagnostic capture and recovery remain planned. This increment does not declare Phase 1 or the full application complete. Validate the CI run before merging; no local .NET runtime is attached to this editing session.
+Admin UI, monitoring agent, diagnostic capture and recovery remain planned. This increment does not declare Phase 1 or the full application complete. No local .NET runtime is attached to this editing session. Validation is deferred until implementation is ready.
