@@ -26,6 +26,7 @@ namespace LegacyErp
                 o.ApplicationName="ERP";o.EnvironmentName="DEV";o.ApplicationVersion="phase4-legacy";
             },o=>{
                 o.Endpoint=new Uri(Environment.GetEnvironmentVariable("OBSERVABILITY_ENDPOINT")??"http://127.0.0.1:5070/api/error-management/events");
+                o.ApiKey=Environment.GetEnvironmentVariable("OBSERVABILITY_API_KEY") ?? throw new InvalidOperationException("Set OBSERVABILITY_API_KEY to an ERP application credential.");
                 o.AttemptTimeout=TimeSpan.FromSeconds(2);o.MaxAttempts=2;
             });
             var correlation=(ICorrelationContext)config.DependencyResolver.GetService(typeof(ICorrelationContext))!;

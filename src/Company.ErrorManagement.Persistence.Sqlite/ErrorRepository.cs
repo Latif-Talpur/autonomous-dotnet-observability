@@ -94,12 +94,8 @@ namespace Company.ErrorManagement.Persistence.Sqlite
             if (existingDefId != null)
             {
                 definitionId = existingDefId;
-                conn.Execute(@"
-                    UPDATE error_definition
-                    SET last_occurred_at_utc = @Now,
-                        occurrence_count = occurrence_count + 1
-                    WHERE error_definition_id = @Id",
-                    new { Now = FormatUtc(DateTime.UtcNow), Id = definitionId }, tx);
+                // occurrence_count is incremented after the occurrence insert succeeds below,
+                // ensuring the count only rises when an occurrence is actually persisted.
             }
             else
             {
@@ -183,7 +179,16 @@ namespace Company.ErrorManagement.Persistence.Sqlite
                         ClientVer = envelope.ClientVersion,
                         IpHash = envelope.ClientIpHash
                     }, tx);
-            // Any insert failure rolls back the definition and occurrence together.
+            // Increment count only after the occurrence insert succeeds; rollback undoes it if anything above fails.
+            if (existingDefId != null)
+            {
+                conn.Execute(@"
+                    UPDATE error_definition
+                    SET last_occurred_at_utc = @Now,
+                        occurrence_count = occurrence_count + 1
+                    WHERE error_definition_id = @Id",
+                    new { Now = FormatUtc(DateTime.UtcNow), Id = definitionId }, tx);
+            }
             tx.Commit();
             return Task.FromResult(receipt);
         }

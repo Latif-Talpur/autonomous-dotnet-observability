@@ -1,6 +1,6 @@
 # Phase 4 — Backend adapters and demonstration hosts
 
-Status: implementation prepared; build, runtime demonstration and tests are deferred at the user's request. Completion criteria are **not yet verified**. This branch starts from the merged Phase 1/HTTP transport changes and contains only Phase 4 plus the integration fixes needed by the samples.
+Status: implementation prepared; build, runtime demonstration and tests are deferred at the user's request. Completion criteria are **not yet verified**. This branch incorporates the merged phases 1–3 changes and contains only Phase 4 plus the integration fixes needed by the samples.
 
 ## Runtime architecture
 
@@ -41,21 +41,39 @@ The modern registration creates a host-wide `IExceptionReporter`; use this share
 
 Prerequisites: Windows for the legacy OWIN console, .NET 8 SDK/runtime for the service and modern host, .NET Framework 4.7.2 runtime (or a compatible installed 4.x runtime). A disposable SQL Server database is optional for the legacy SQL endpoints. No ERP business schema is modified.
 
-Run these in three terminals from the repository root when ready for validation:
+Run these in three terminals from the repository root when ready for validation. Provision the application key after starting the central service and before starting the sample hosts (see below):
 
 ```powershell
 # Terminal 1 — central service, loopback only
 $env:ASPNETCORE_URLS = "http://127.0.0.1:5070"
+$env:ASPNETCORE_ENVIRONMENT = "Development"
 dotnet run --project src/Company.ErrorManagement.IngestionService --no-launch-profile
 
 # Terminal 2 — modern ERP, port 5080
+$env:Observability__ApiKey = "<issued ERP application key>"
 dotnet run --project samples/ModernErp
 
 # Terminal 3 — legacy ERP, port 5081
+$env:OBSERVABILITY_API_KEY = "<issued ERP application key>"
 # Optional: set a LOCAL/DISPOSABLE database connection through your environment.
 # $env:DEMO_SQLSERVER_CONNECTION = "..."
 dotnet run --project samples/LegacyErp
 ```
+
+The Phase 3 development-only token endpoint can provision a sample application key on the loopback service. Run these commands later in a local development session; no key is committed to source:
+
+```powershell
+$token = Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:5070/api/auth/token" `
+  -ContentType "application/json" -Body '{"userId":"phase4-local-admin","role":"admin"}'
+$headers = @{ Authorization = "Bearer " + $token.token }
+$credential = Invoke-RestMethod -Method Post `
+  -Uri "http://127.0.0.1:5070/api/applications/app-erp/credentials" `
+  -Headers $headers -ContentType "application/json" `
+  -Body '{"description":"Local Phase 4 samples","validForDays":1}'
+# Pass $credential.rawKey securely to each sample's environment variable above.
+```
+
+The sample code sends this server-only key as `X-Api-Key` to `/events`. Browser errors go through the ERP host's forwarding endpoint; the browser does not receive the key. The existing Phase 3 JWT/CORS/rate-limit configuration is preserved. Its development token issuer must remain private to the loopback demonstration.
 
 For HTTP.sys access-denied errors, an administrator can grant the current Windows user the exact loopback URL reservation once:
 
@@ -126,7 +144,7 @@ Modern startup:
 ```csharp
 services.AddErpErrorManagementHttp(
     o => { o.ApplicationName = "ERP"; o.EnvironmentName = "DEV"; },
-    o => { o.Endpoint = new Uri(ingestionUrl); });
+    o => { o.Endpoint = new Uri(ingestionUrl); o.ApiKey = applicationApiKey; });
 services.AddErpDatabaseInterception();
 services.AddDbContext<ErpDbContext>((sp, o) => {
     o.UseSqlServer(businessConnection);
@@ -145,7 +163,7 @@ Legacy startup (configure the ERP DI resolver before this call):
 ```csharp
 ErrorManagementConfig.RegisterHttp(config,
     o => { o.ApplicationName = "ERP"; o.EnvironmentName = "DEV"; },
-    o => { o.Endpoint = new Uri(ingestionUrl); });
+    o => { o.Endpoint = new Uri(ingestionUrl); o.ApiKey = applicationApiKey; });
 ```
 
 Handled/background operation:
@@ -166,9 +184,13 @@ using (CorrelationIds.BeginScope(correlationContext))
 ## Boundaries and remaining work
 
 - No build, server launch, HTTP demonstration or test execution has been performed for this change.
-- Direct HTTP delivery still awaits bounded attempts. Synchronous EF callbacks wait for capture to finish; durable background delivery is Phase 2 work, not claimed here.
+- Direct HTTP delivery still awaits bounded attempts. Synchronous EF callbacks wait for capture to finish in these direct-delivery samples. The merged Phase 2 spooled transport remains available: register it with `AddErrorManagementHttpTransportWithSpool` and then `AddErpErrorManagement` in a modern host; provisional receipts have `canReportIssue=false` until delivery is confirmed separately.
 - SQL Server/PostgreSQL/MySQL mapping code is present; only the SQL Server and SQLite sample paths are supplied. Actual provider runs remain deferred.
 - Cancellation requested by the caller is not treated as an unexpected request failure. Command cancellation is not assumed to mean a timeout.
 - After a response starts, the middleware cannot replace it safely; it captures and rethrows so the host terminates the response.
-- The samples intentionally expose fault endpoints and are bound to loopback. Apply existing ERP authentication, authorization, CORS and rate limits to client-error endpoints before deployment. Central service authentication is still Phase 3 work.
+- The samples intentionally expose fault endpoints and are bound to loopback. Apply existing ERP authentication, authorization, CORS and rate limits to client-error endpoints before deployment. The central ingestion route uses Phase 3 application API-key authentication.
 - Upstream proxies forwarding an existing safe error response should forward it without calling `EnsureSuccessStatusCode`; this avoids creating a new exception for an already-reported downstream error.
+
+## Reconciliation with phases 1–3
+
+The Phase 4 shared capture replaces the earlier EF `erp:capturing` fire-and-forget stamp, so the middleware can return the actual shared reference rather than `ERR-UNKNOWN`. Security policies and spool services from `main` are retained. Integration fixes add the required JWT Bearer package, carry API keys through both direct/background transport, repair the spool facade constructor visibility, and use `TryWrite` with wait-mode capacity so overflow reaches the spool instead of being silently dropped. These changes have not been executed.

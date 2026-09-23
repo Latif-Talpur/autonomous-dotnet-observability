@@ -16,8 +16,8 @@ Still required before this phase is complete:
 
 | Phase | Work | Exit criteria |
 |---|---|---|
-| 2 (started) | Direct HTTP transport and bounded retry implemented; bounded queue, durable spool, circuit breaker and replay remain | Ingestion outage does not break business requests; recovery replays without duplicates |
-| 3 | Application registration, credentials, admin authentication and roles | Ingestion and admin routes enforce separate permissions and scope |
+| 2 (merged on main) | Direct HTTP transport, background queue, local spool, circuit breaker and replay present; validation deferred | Ingestion outage does not break business requests; recovery replays without duplicates |
+| 3 (merged on main) | Application registration, API credentials, JWT authorization, CORS and rate limiting present; validation deferred | Ingestion and admin routes enforce separate permissions and scope |
 | 4 (implementation prepared) | Backend registration, explicit capture, EF interception, correlation and both sample hosts; see [Phase 4 guide](phase-4-backend-adapters.md) | End-to-end demonstration and tests deferred; completion not yet verified |
 | 5 | Angular error reporting, notifications and issue submission | Client and HTTP failures report once; reporting failure cannot recurse |
 | 6 | Ticket transitions, assignment, comments and audit | Workflow and concurrency rules tested with immutable audit |

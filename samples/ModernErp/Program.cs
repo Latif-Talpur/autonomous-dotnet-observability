@@ -11,6 +11,7 @@ builder.Services.AddErpErrorManagementHttp(o=>{
     o.ApplicationName="ERP";o.EnvironmentName="DEV";o.ApplicationVersion="phase4-modern";
 },o=>{
     o.Endpoint=new Uri(builder.Configuration["Observability:Endpoint"]??"http://127.0.0.1:5070/api/error-management/events");
+    o.ApiKey=builder.Configuration["Observability:ApiKey"] ?? throw new InvalidOperationException("Set Observability__ApiKey to an ERP application credential.");
     o.AttemptTimeout=TimeSpan.FromSeconds(2);o.MaxAttempts=2;
 });
 builder.Services.AddErpDatabaseInterception();

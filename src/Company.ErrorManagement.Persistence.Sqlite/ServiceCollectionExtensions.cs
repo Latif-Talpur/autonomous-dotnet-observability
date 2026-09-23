@@ -18,6 +18,7 @@ namespace Company.ErrorManagement.Persistence.Sqlite
             services.AddSingleton<IErrorRepository, ErrorRepository>();
             services.AddSingleton<ITicketRepository, TicketRepository>();
             services.AddSingleton<IReportingRepository, ReportingRepository>();
+            services.AddSingleton<IApplicationRepository, ApplicationRepository>();
 
             services.AddSingleton<IErrorTransport, DirectSqlErrorTransport>();
             services.AddSingleton<IErrorFingerprintProvider, FingerprintProvider>();
