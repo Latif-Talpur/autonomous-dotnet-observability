@@ -48,6 +48,7 @@ namespace Company.ErrorManagement.Transport.Http
             // The circuit breaker and spool replay handle long-term retries.
             _singleAttemptOptions = new HttpErrorTransportOptions
             {
+                ApiKey = transportOptions.ApiKey,
                 Endpoint = transportOptions.Endpoint,
                 AttemptTimeout = transportOptions.AttemptTimeout,
                 MaxAttempts = 1,

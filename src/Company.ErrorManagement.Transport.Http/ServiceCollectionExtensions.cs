@@ -98,7 +98,7 @@ namespace Company.ErrorManagement.Transport.Http
                     sp.GetRequiredService<ILogger<BackgroundDeliveryQueue>>()));
 
             // Non-blocking transport facade.
-            services.Replace(ServiceDescriptor.Singleton<IErrorTransport, SpooledHttpErrorTransport>());
+            services.Replace(ServiceDescriptor.Singleton<IErrorTransport>(sp => new SpooledHttpErrorTransport(sp.GetRequiredService<BackgroundDeliveryQueue>(), sp.GetRequiredService<ILogger<SpooledHttpErrorTransport>>())));
 
             // Background delivery and spool replay service.
             services.AddSingleton<BackgroundDeliveryService>(sp =>
@@ -120,7 +120,7 @@ namespace Company.ErrorManagement.Transport.Http
         private static void RegisterCoreServices(IServiceCollection services)
         {
             services.TryAddSingleton<IErrorNormalizer, ErrorNormalizer>();
-            services.TryAddSingleton<IPayloadRedactor, PayloadRedactor>();
+            services.TryAddSingleton<IPayloadRedactor>(_ => new PayloadRedactor());
             services.TryAddSingleton<IErrorFingerprintProvider, FingerprintProvider>();
             services.TryAddSingleton<IErrorReferenceGenerator, ErrorReferenceGenerator>();
             services.TryAddSingleton<ICorrelationContext, AmbientCorrelationContext>();

@@ -5,6 +5,8 @@ namespace Company.ErrorManagement.Transport.Http
     public sealed class HttpErrorTransportOptions
     {
         // Full endpoint, e.g. https://observability.example/api/error-management/events.
+        // Server-side application key; never put this in browser configuration.
+        public string? ApiKey { get; set; }
         public Uri? Endpoint { get; set; }
         public TimeSpan AttemptTimeout { get; set; } = TimeSpan.FromSeconds(5);
         public int MaxAttempts { get; set; } = 3;
@@ -20,6 +22,8 @@ namespace Company.ErrorManagement.Transport.Http
                  !(Endpoint.Scheme == Uri.UriSchemeHttp && Endpoint.IsLoopback)) ||
                 !string.IsNullOrEmpty(Endpoint.UserInfo) || !string.IsNullOrEmpty(Endpoint.Fragment))
                 throw new ArgumentException("Provide an HTTPS ingestion endpoint (HTTP is allowed for loopback).");
+            if (ApiKey != null && (ApiKey.Length > 512 || ApiKey.IndexOfAny(new[] { '\r', '\n' }) >= 0))
+                throw new ArgumentException("Invalid API key.");
             if (AttemptTimeout <= TimeSpan.Zero || AttemptTimeout > TimeSpan.FromMinutes(1) ||
                 MaxAttempts < 1 || MaxAttempts > 5 ||
                 InitialRetryDelay < TimeSpan.Zero || MaxRetryDelay < InitialRetryDelay ||

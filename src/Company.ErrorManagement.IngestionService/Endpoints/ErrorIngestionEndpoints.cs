@@ -24,7 +24,7 @@ public static class ErrorIngestionEndpoints
                 return Results.Forbid();
 
             var receipt = await reporter.CaptureAsync(envelope, ct);
-            return Results.Accepted($"/api/error-management/events/{receipt.ErrorReference}", receipt);
+            return Results.Json(receipt, statusCode: receipt.Persisted ? 200 : 503);
         })
         .WithName("IngestError")
         .RequireAuthorization(AuthorizationPolicies.ApplicationIngestion);
@@ -38,7 +38,7 @@ public static class ErrorIngestionEndpoints
         {
             envelope.Layer = ErrorLayer.Angular;
             var receipt = await reporter.CaptureAsync(envelope, ct);
-            return Results.Accepted(null, receipt);
+            return Results.Json(receipt, statusCode: receipt.Persisted ? 200 : 503);
         })
         .WithName("IngestClientError")
         .RequireCors("ClientErrors");

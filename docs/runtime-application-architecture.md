@@ -1,3 +1,5 @@
+> Phase 4 update: the repository now contains Web API 2 and .NET 8 sample hosts in addition to the central service. See [the Phase 4 diagram and integration guide](phase-4-backend-adapters.md). Earlier review sections below describe the pre-sample baseline. EF/global capture now shares an awaited receipt instead of the `erp:capturing` stamp; the merged HTTP spool and security implementation are preserved. Runtime verification is deferred.
+
 # Runtime Application Architecture and Design Alignment
 
 This page compares the current repository with [the original framework proposal](./02_Dynamic%20Enterprise%20Error%20Management%20and%20Ticketing%20Framework_V2%20(1).docx) and [the implementation plan](./03_Implementation_Architecture_and_Delivery_Plan.md). It describes a deployment in which an existing ERP application reports errors to a central service and support staff use a separate administration UI.

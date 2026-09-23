@@ -27,7 +27,7 @@ namespace Company.ErrorManagement.Transport.Http
             // Snapshot configuration so callers cannot mutate limits during a send.
             _options = new HttpErrorTransportOptions
             {
-                Endpoint = options.Endpoint, AttemptTimeout = options.AttemptTimeout,
+                ApiKey = options.ApiKey, Endpoint = options.Endpoint, AttemptTimeout = options.AttemptTimeout,
                 MaxAttempts = options.MaxAttempts, InitialRetryDelay = options.InitialRetryDelay,
                 MaxRetryDelay = options.MaxRetryDelay, MaxPayloadBytes = options.MaxPayloadBytes,
                 MaxReceiptBytes = options.MaxReceiptBytes
@@ -59,6 +59,7 @@ namespace Company.ErrorManagement.Transport.Http
                     {
                         using (var request = new HttpRequestMessage(HttpMethod.Post, _options.Endpoint))
                         {
+                            if (!string.IsNullOrWhiteSpace(_options.ApiKey)) request.Headers.Add("X-Api-Key", _options.ApiKey);
                             request.Content = new StringContent(payload, Encoding.UTF8, "application/json");
                             using (var response = await _client.SendAsync(request,
                                 HttpCompletionOption.ResponseHeadersRead, timeout.Token).ConfigureAwait(false))

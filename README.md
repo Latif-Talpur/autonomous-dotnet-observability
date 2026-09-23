@@ -209,3 +209,7 @@ flowchart TD
 ## License
 
 Licensed under the [Apache License 2.0](LICENSE).
+
+## Backend adapter demonstrations
+
+See [Phase 4 backend adapters](docs/phase-4-backend-adapters.md) for the Web API 2 and .NET 8 sample hosts, startup registration, EF interception, correlation, and the deferred validation matrix.

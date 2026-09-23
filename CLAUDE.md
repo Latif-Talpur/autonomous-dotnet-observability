@@ -175,3 +175,8 @@ Two named policies: `ClientErrors` (POST-only from Angular origins) and `AdminUI
 ## Project phases
 
 Work is tracked in `docs/runtime-application-architecture.md`. Phases 1–3 are complete. Phases 4–12 cover: sample hosts, Angular components, ticket workflow enforcement, Admin UI, reporting, monitoring agent, diagnostics, recovery, and packaging.
+
+
+## Phase 4 implementation update (supersedes earlier adapter notes)
+
+The repository now includes loopback-only `samples/ModernErp` and `samples/LegacyErp` hosts; see `docs/phase-4-backend-adapters.md`. `AddErpErrorManagementHttp` configures HTTP delivery and shared `IExceptionReporter`; `RegisterHttp` configures Web API 2 and decorates the host resolver. Supply the Phase 3 application key through `HttpErrorTransportOptions.ApiKey` (X-Api-Key). References use a GUID suffix. EF command/connection/SaveChanges interception and global handlers now share a receipt per exception root/correlation instead of an `erp:capturing` stamp. Explicit background captures should create a correlation scope. Build, demonstrations and tests are deferred by user instruction.

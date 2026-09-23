@@ -17,7 +17,7 @@ namespace Company.ErrorManagement.Transport.Http
         private readonly BackgroundDeliveryQueue _queue;
         private readonly ILogger<SpooledHttpErrorTransport> _logger;
 
-        public SpooledHttpErrorTransport(
+        internal SpooledHttpErrorTransport(
             BackgroundDeliveryQueue queue,
             ILogger<SpooledHttpErrorTransport> logger)
         {

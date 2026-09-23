@@ -9,16 +9,16 @@ This increment fixes replay handling in SQLite: the same event ID returns the st
 Still required before this phase is complete:
 - Finalize API/client JSON contracts and validate ingestion payloads.
 - Preserve stable event/reference identities across adapter capture and transport retries.
-- Prevent duplicate capture of one exception by EF and middleware.
+- Validate shared exception capture across EF and middleware (implementation added in Phase 4).
 - Confirm central-only persistence and document supported hosting boundaries.
 
 ## Remaining phases
 
 | Phase | Work | Exit criteria |
 |---|---|---|
-| 2 (started) | Direct HTTP transport and bounded retry implemented; bounded queue, durable spool, circuit breaker and replay remain | Ingestion outage does not break business requests; recovery replays without duplicates |
-| 3 | Application registration, credentials, admin authentication and roles | Ingestion and admin routes enforce separate permissions and scope |
-| 4 | ASP.NET Core, Web API 2 and EF adapter integration | Sample applications correlate and capture failures end to end |
+| 2 (merged on main) | Direct HTTP transport, background queue, local spool, circuit breaker and replay present; validation deferred | Ingestion outage does not break business requests; recovery replays without duplicates |
+| 3 (merged on main) | Application registration, API credentials, JWT authorization, CORS and rate limiting present; validation deferred | Ingestion and admin routes enforce separate permissions and scope |
+| 4 (implementation prepared) | Backend registration, explicit capture, EF interception, correlation and both sample hosts; see [Phase 4 guide](phase-4-backend-adapters.md) | End-to-end demonstration and tests deferred; completion not yet verified |
 | 5 | Angular error reporting, notifications and issue submission | Client and HTTP failures report once; reporting failure cannot recurse |
 | 6 | Ticket transitions, assignment, comments and audit | Workflow and concurrency rules tested with immutable audit |
 | 7 | Admin UI | Authorized users triage errors and manage tickets |
@@ -28,4 +28,4 @@ Still required before this phase is complete:
 | 11 | Guarded recovery with approvals and execution audit | Allowlisted actions enforce approval, limits and cooldowns |
 | 12 | Packaging, deployment and acceptance testing | Documented install, upgrade, restore and end-to-end checks pass |
 
-Admin UI, monitoring agent, diagnostic capture and recovery remain planned. This increment does not declare Phase 1 or the full application complete. No local .NET runtime is attached to this editing session. Validation is deferred until implementation is ready.
+Admin UI, monitoring agent, diagnostic capture and recovery remain planned. This increment does not declare Phase 1 or the full application complete. Validation is deferred at the user's request.

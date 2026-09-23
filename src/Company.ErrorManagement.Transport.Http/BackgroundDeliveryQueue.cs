@@ -23,7 +23,8 @@ namespace Company.ErrorManagement.Transport.Http
             _logger = logger;
             _channel = Channel.CreateBounded<ErrorEnvelope>(new BoundedChannelOptions(options.MaxQueuedEvents)
             {
-                FullMode = BoundedChannelFullMode.DropWrite,
+                // TryWrite returns false when full; it never waits. DropWrite would silently lose overflow.
+                FullMode = BoundedChannelFullMode.Wait,
                 SingleReader = true,
                 SingleWriter = false
             });

@@ -12,5 +12,6 @@
   <ItemGroup>
     <ProjectReference Include="..\Company.ErrorManagement.Contracts\Company.ErrorManagement.Contracts.csproj" />
     <ProjectReference Include="..\Company.ErrorManagement.Core\Company.ErrorManagement.Core.csproj" />
+    <ProjectReference Include="../Company.ErrorManagement.Transport.Http/Company.ErrorManagement.Transport.Http.csproj" />
   </ItemGroup>
 </Project>
