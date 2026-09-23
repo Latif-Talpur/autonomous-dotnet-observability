@@ -23,6 +23,7 @@ namespace Company.ErrorManagement.Persistence.Sqlite
 
         public Task<ErrorReceipt> UpsertAsync(ErrorEnvelope envelope, CancellationToken cancellationToken)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             using var conn = _factory.Open();
             using var tx = conn.BeginTransaction();
 
@@ -37,6 +38,39 @@ namespace Company.ErrorManagement.Persistence.Sqlite
                 new { Code = envelope.EnvironmentCode }, tx);
             if (envId == null) throw new InvalidOperationException(
                 $"Environment '{envelope.EnvironmentCode}' is not registered.");
+
+            // BeginTransaction acquires SQLite's write lock before checking the event.
+            // A retry must return the original receipt without changing aggregates.
+            var existing = conn.QuerySingleOrDefault<dynamic>(@"
+                SELECT o.error_reference AS ErrorReference, o.correlation_id AS CorrelationId,
+                       o.received_at_utc AS ReceivedAtUtc, o.tenant_id AS Tenant,
+                       d.application_id AS ApplicationId, d.environment_id AS EnvironmentId,
+                       d.fingerprint AS Fingerprint
+                FROM error_occurrence o
+                JOIN error_definition d ON d.error_definition_id = o.error_definition_id
+                WHERE o.event_id = @EventId", new { envelope.EventId }, tx);
+            if (existing != null)
+            {
+                if ((string)existing.ApplicationId != appId ||
+                    (string)existing.EnvironmentId != envId ||
+                    (string?)existing.Tenant != envelope.Tenant)
+                    throw new InvalidOperationException("Event ID is already used in a different scope.");
+
+                var original = new ErrorReceipt
+                {
+                    EventId = envelope.EventId,
+                    ErrorReference = (string)existing.ErrorReference,
+                    CorrelationId = (string)existing.CorrelationId,
+                    Fingerprint = (string)existing.Fingerprint,
+                    AcceptedAtUtc = DateTime.Parse((string)existing.ReceivedAtUtc,
+                        System.Globalization.CultureInfo.InvariantCulture,
+                        System.Globalization.DateTimeStyles.RoundtripKind),
+                    Persisted = true,
+                    CanReportIssue = true
+                };
+                tx.Commit();
+                return Task.FromResult(original);
+            }
 
             var categoryId = envelope.CategoryCode == null
                 ? null
@@ -107,9 +141,7 @@ namespace Company.ErrorManagement.Persistence.Sqlite
                 SafeMessage = "Unable to process the request"
             };
 
-            try
-            {
-                conn.Execute(@"
+            conn.Execute(@"
                     INSERT INTO error_occurrence (
                         error_occurrence_id, event_id, error_definition_id, error_reference,
                         correlation_id, occurred_at_utc, received_at_utc, user_id, tenant_id,
@@ -130,7 +162,7 @@ namespace Company.ErrorManagement.Persistence.Sqlite
                         Ref = envelope.ErrorReference,
                         Corr = envelope.CorrelationId,
                         Occurred = FormatUtc(envelope.OccurredAtUtc),
-                        Received = FormatUtc(DateTime.UtcNow),
+                        Received = FormatUtc(receipt.AcceptedAtUtc),
                         UserId = envelope.UserId,
                         Tenant = envelope.Tenant,
                         AppVer = envelope.ApplicationVersion,
@@ -151,12 +183,7 @@ namespace Company.ErrorManagement.Persistence.Sqlite
                         ClientVer = envelope.ClientVersion,
                         IpHash = envelope.ClientIpHash
                     }, tx);
-            }
-            catch (Microsoft.Data.Sqlite.SqliteException ex) when (ex.SqliteErrorCode == 19)
-            {
-                receipt.Persisted = false;
-            }
-
+            // Any insert failure rolls back the definition and occurrence together.
             tx.Commit();
             return Task.FromResult(receipt);
         }
