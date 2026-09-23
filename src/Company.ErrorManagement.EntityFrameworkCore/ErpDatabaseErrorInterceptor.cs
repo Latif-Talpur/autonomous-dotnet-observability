@@ -1,4 +1,5 @@
 using System;
+using System.Data;
 using System.Data.Common;
 using System.Threading;
 using System.Threading.Tasks;
@@ -11,71 +12,23 @@ namespace Company.ErrorManagement.EntityFrameworkCore
 {
     public sealed class ErpDatabaseErrorInterceptor : DbCommandInterceptor
     {
-        private readonly IErrorReporter _reporter;
-        private readonly ICorrelationContext _correlation;
-        private readonly ILogger<ErpDatabaseErrorInterceptor> _logger;
-        private readonly string _applicationCode;
-        private readonly string _environmentCode;
-
-        public ErpDatabaseErrorInterceptor(
-            IErrorReporter reporter,
-            ICorrelationContext correlation,
-            ILogger<ErpDatabaseErrorInterceptor> logger,
-            string applicationCode,
-            string environmentCode)
-        {
-            _reporter = reporter;
-            _correlation = correlation;
-            _logger = logger;
-            _applicationCode = applicationCode;
-            _environmentCode = environmentCode;
-        }
-
+        private readonly IExceptionReporter reporter;
+        public ErpDatabaseErrorInterceptor(IExceptionReporter reporter) { this.reporter = reporter; }
+        // Backward-compatible constructor; prefer DI registration to share deduplication across adapters.
+        public ErpDatabaseErrorInterceptor(IErrorReporter reporter, ICorrelationContext correlation,
+            ILogger<ErpDatabaseErrorInterceptor> logger, string applicationCode, string environmentCode)
+            : this(new ExceptionReporter(reporter, correlation, applicationCode, environmentCode)) { }
         public override void CommandFailed(DbCommand command, CommandErrorEventData eventData)
-        {
-            _ = CaptureAsync(command, eventData.Exception, CancellationToken.None);
-            base.CommandFailed(command, eventData);
-        }
-
+            => Capture(command, eventData.Exception).GetAwaiter().GetResult();
         public override Task CommandFailedAsync(DbCommand command, CommandErrorEventData eventData, CancellationToken cancellationToken = default)
+            => Capture(command, eventData.Exception);
+        private async Task Capture(DbCommand command, Exception exception)
         {
-            _ = CaptureAsync(command, eventData.Exception, cancellationToken);
-            return base.CommandFailedAsync(command, eventData, cancellationToken);
-        }
-
-        private async Task CaptureAsync(DbCommand command, Exception exception, CancellationToken cancellationToken)
-        {
-            try
-            {
-                var envelope = ErrorNormalizer.FromException(exception, ErrorLayer.Database);
-                envelope.ApplicationCode = _applicationCode;
-                envelope.EnvironmentCode = _environmentCode;
-                envelope.CorrelationId = _correlation.CorrelationId ?? Guid.NewGuid().ToString("N");
-                envelope.DbProvider = command.Connection?.GetType().Name;
-                envelope.DbProcedure = command.CommandType == System.Data.CommandType.StoredProcedure
-                    ? command.CommandText
-                    : null;
-                envelope.IsTimeout = IsTimeout(exception);
-                envelope.CategoryCode = "DATABASE";
-
-                await _reporter.CaptureAsync(envelope, cancellationToken).ConfigureAwait(false);
-            }
-            catch (Exception captureEx)
-            {
-                _logger.LogWarning(captureEx, "Failed to capture EF Core command failure");
-            }
-        }
-
-        private static bool IsTimeout(Exception exception)
-        {
-            var current = exception;
-            while (current != null)
-            {
-                if (current is TimeoutException) return true;
-                if (current.GetType().Name.Contains("Timeout", StringComparison.OrdinalIgnoreCase)) return true;
-                current = current.InnerException;
-            }
-            return false;
+            try { await reporter.ReportAsync(exception, new ErrorCaptureContext {
+                Layer = ErrorLayer.Database, DbProvider = command.Connection?.GetType().FullName,
+                DbProcedure = command.CommandType == CommandType.StoredProcedure ? command.CommandText : null
+            }, CancellationToken.None).ConfigureAwait(false); }
+            catch { /* Never replace the application's database failure with a reporting failure. */ }
         }
     }
 }

@@ -1,18 +1,11 @@
 using System;
-using System.Threading;
 using Company.ErrorManagement.Contracts;
 
 namespace Company.ErrorManagement.Core
 {
     public sealed class ErrorReferenceGenerator : IErrorReferenceGenerator
     {
-        private static int _sequence;
-
-        public string Generate()
-        {
-            var now = DateTime.UtcNow;
-            var seq = Interlocked.Increment(ref _sequence) & 0xFFFFFF;
-            return $"ERR-{now:yyyyMMdd}-{seq:D6}";
-        }
+        // References are opaque and unique across processes, restarts and application instances.
+        public string Generate() => $"ERR-{DateTime.UtcNow:yyyyMMdd}-{Guid.NewGuid():N}";
     }
 }

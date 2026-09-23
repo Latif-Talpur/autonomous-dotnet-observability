@@ -15,7 +15,7 @@ public static class ErrorIngestionEndpoints
             CancellationToken ct) =>
         {
             var receipt = await reporter.CaptureAsync(envelope, ct);
-            return Results.Accepted($"/api/error-management/events/{receipt.ErrorReference}", receipt);
+            return Results.Json(receipt, statusCode: receipt.Persisted ? 200 : 503);
         }).WithName("IngestError");
 
         group.MapPost("/client-errors", async (
@@ -25,7 +25,7 @@ public static class ErrorIngestionEndpoints
         {
             envelope.Layer = ErrorLayer.Angular;
             var receipt = await reporter.CaptureAsync(envelope, ct);
-            return Results.Accepted(null, receipt);
+            return Results.Json(receipt, statusCode: receipt.Persisted ? 200 : 503);
         }).WithName("IngestClientError");
 
         return routes;

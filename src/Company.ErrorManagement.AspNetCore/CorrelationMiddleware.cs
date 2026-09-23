@@ -1,6 +1,6 @@
-using System;
 using System.Threading.Tasks;
 using Company.ErrorManagement.Contracts;
+using Company.ErrorManagement.Core;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Options;
 
@@ -8,39 +8,19 @@ namespace Company.ErrorManagement.AspNetCore
 {
     public sealed class CorrelationMiddleware
     {
-        private readonly RequestDelegate _next;
-        private readonly ErrorManagementOptions _options;
-
-        public CorrelationMiddleware(RequestDelegate next, IOptions<ErrorManagementOptions> options)
+        private readonly RequestDelegate next;
+        private readonly ErrorManagementOptions options;
+        public CorrelationMiddleware(RequestDelegate next, IOptions<ErrorManagementOptions> options) { this.next = next; this.options = options.Value; }
+        public async Task InvokeAsync(HttpContext http, ICorrelationContext correlation)
         {
-            _next = next;
-            _options = options.Value;
-        }
-
-        public async Task InvokeAsync(HttpContext context, ICorrelationContext correlationContext)
-        {
-            var header = _options.CorrelationHeaderName;
-            string correlationId;
-            if (context.Request.Headers.TryGetValue(header, out var values) && !string.IsNullOrWhiteSpace(values))
+            var header = options.CorrelationHeaderName;
+            var id = CorrelationIds.Normalize(http.Request.Headers[header].Count == 1 ? http.Request.Headers[header][0] : null);
+            var user = http.User.Identity?.IsAuthenticated == true ? http.User.Identity.Name : null;
+            using (CorrelationIds.BeginScope(correlation, id, user))
             {
-                correlationId = values!;
+                http.Response.OnStarting(() => { http.Response.Headers[header] = id; return Task.CompletedTask; });
+                await next(http);
             }
-            else
-            {
-                correlationId = Guid.NewGuid().ToString("N");
-            }
-
-            var userId = context.User?.Identity?.IsAuthenticated == true ? context.User.Identity.Name : null;
-            correlationContext.Set(correlationId, userId);
-
-            context.Response.OnStarting(() =>
-            {
-                if (!context.Response.Headers.ContainsKey(header))
-                    context.Response.Headers[header] = correlationId;
-                return Task.CompletedTask;
-            });
-
-            await _next(context);
         }
     }
 }

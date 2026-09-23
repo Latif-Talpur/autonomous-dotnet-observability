@@ -27,10 +27,10 @@ namespace Company.ErrorManagement.Transport.Http
             services.Replace(ServiceDescriptor.Transient<IErrorTransport>(provider =>
                 provider.GetRequiredService<HttpErrorTransport>()));
             services.TryAddSingleton<IErrorNormalizer, ErrorNormalizer>();
-            services.TryAddSingleton<IPayloadRedactor, PayloadRedactor>();
+            services.TryAddSingleton<IPayloadRedactor>(_ => new PayloadRedactor());
             services.TryAddSingleton<IErrorFingerprintProvider, FingerprintProvider>();
             services.TryAddSingleton<IErrorReferenceGenerator, ErrorReferenceGenerator>();
-            services.TryAddSingleton<ICorrelationContext, CorrelationContext>();
+            services.TryAddSingleton<ICorrelationContext, AmbientCorrelationContext>();
             services.TryAddTransient<IErrorReporter, ErrorReporter>();
             return services;
         }

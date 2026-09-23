@@ -29,9 +29,10 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
     var runner = scope.ServiceProvider.GetRequiredService<SqliteMigrationRunner>();
-    var migrationDir = builder.Configuration["ErrorManagement:MigrationsDirectory"];
-    var seedDir = builder.Configuration["ErrorManagement:SeedDirectory"];
-    if (!string.IsNullOrWhiteSpace(migrationDir) && Directory.Exists(migrationDir))
+    var migrationDir = Path.GetFullPath(builder.Configuration["ErrorManagement:MigrationsDirectory"] ?? "database/migrations", AppContext.BaseDirectory);
+    var seedDir = Path.GetFullPath(builder.Configuration["ErrorManagement:SeedDirectory"] ?? "database/seed", AppContext.BaseDirectory);
+    if (!Directory.Exists(migrationDir)) throw new DirectoryNotFoundException("Ingestion migrations directory is missing: " + migrationDir);
+    if (Directory.Exists(migrationDir))
     {
         var applied = runner.Apply(migrationDir, seedDir);
         app.Logger.LogInformation("Applied {Count} migrations", applied.Count);

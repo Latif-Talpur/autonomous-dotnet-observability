@@ -1,6 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk.Web">
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>Company.ErrorManagement.IngestionService</RootNamespace>
     <AssemblyName>Company.ErrorManagement.IngestionService</AssemblyName>
     <UserSecretsId>erp-error-management-ingestion</UserSecretsId>
@@ -13,5 +14,9 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.7.1" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="../../database/migrations/*.sql" Link="database/migrations/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="../../database/seed/*.sql" Link="database/seed/%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>
