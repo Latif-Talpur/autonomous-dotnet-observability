@@ -1,0 +1,22 @@
+{
+  "name": "@company/erp-error-angular",
+  "version": "0.1.0",
+  "description": "Angular 20 adapter for the ERP Error Management framework.",
+  "peerDependencies": {
+    "@angular/common": ">=20.0.0",
+    "@angular/core": ">=20.0.0",
+    "@angular/router": ">=20.0.0",
+    "rxjs": ">=7.8.0"
+  },
+  "sideEffects": false,
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "files": ["dist", "src", "public-api.ts", "README.md"],
+  "scripts": {
+    "build": "tsc -p tsconfig.lib.json"
+  },
+  "devDependencies": {
+    "typescript": "5.5.4"
+  }
+}

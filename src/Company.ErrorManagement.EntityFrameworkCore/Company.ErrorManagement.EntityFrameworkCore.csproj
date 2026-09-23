@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>Company.ErrorManagement.EntityFrameworkCore</RootNamespace>
+    <AssemblyName>Company.ErrorManagement.EntityFrameworkCore</AssemblyName>
+    <PackageId>Company.ErrorManagement.EntityFrameworkCore</PackageId>
+    <Description>Entity Framework Core interceptors for safe database exception metadata.</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="8.0.10" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Company.ErrorManagement.Contracts\Company.ErrorManagement.Contracts.csproj" />
+    <ProjectReference Include="..\Company.ErrorManagement.Core\Company.ErrorManagement.Core.csproj" />
+  </ItemGroup>
+</Project>

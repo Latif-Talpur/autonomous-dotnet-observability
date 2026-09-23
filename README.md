@@ -1,230 +1,210 @@
 # Autonomous .NET Observability
 
-A centralized observability, error-management, and controlled self-healing framework for enterprise .NET applications.
+A centralized, end-to-end **Error-to-Ticket Management Framework** for enterprise .NET and Angular ERP applications.
 
-The framework supports mixed environments containing ASP.NET Web API 2 on .NET Framework, modern .NET services, Angular clients, SQL databases, Windows Server, IIS, containers, and Kubernetes.
+The framework captures errors from every layer of the stack — Angular, Web API 2 (.NET 4.7.2), ASP.NET Core (.NET 8), EF Core, and SQL — normalizes them through a shared core library, persists them to a dedicated database, and provides a complete ticket lifecycle with immutable audit history.
 
-> **Project status:** Architecture and foundation development. Interfaces and database structures may change before the first stable release.
+> **Project status:** Foundation and core phases implemented. Angular admin UI screens are the next planned addition.
 
-## Purpose
+---
 
-Enterprise applications commonly use separate solutions for exception logging, infrastructure monitoring, memory-dump collection, incident tracking, and recovery. This separation makes it difficult to understand what happened before a failure and determine whether a recovery action resolved the underlying problem.
+## Quick Start
 
-Autonomous .NET Observability connects application errors, logs, traces, process metrics, diagnostic artifacts, incidents, support tickets, and recovery actions through common event and correlation identifiers.
+```powershell
+# 1. Create and seed the database
+.\docs\installation\scripts\setup-database.ps1
+
+# 2. Build the .NET solution
+.\docs\installation\scripts\build-solution.ps1
+
+# 3. Start the ingestion service  (Swagger: http://localhost:5080/swagger)
+.\docs\installation\scripts\start-ingestion-service.ps1
+
+# 4. Run all automated tests
+.\docs\installation\scripts\run-tests.ps1
+
+# 5. Build the Angular library (requires Node.js 20+)
+.\docs\installation\scripts\build-angular-library.ps1
+```
+
+---
+
+## What Was Built
+
+### Error Flow
+
+```
+Error Occurs → Global Adapter Captures → Core Normalizes & Redacts → Fingerprint Calculated
+    → Ingestion Service Persists → Safe Reference Returned → User Sees Safe Message
+        → User Clicks "Report Issue" → Ticket Created → Support Queue → Audit Trail
+```
+
+### Packages
+
+| Package | Target | Purpose |
+|---|---|---|
+| `Company.ErrorManagement.Contracts` | .NET Standard 2.0 | Shared envelope, receipt, ticket contracts, and interfaces |
+| `Company.ErrorManagement.Core` | .NET Standard 2.0 | Fingerprinting, redaction, normalization, reference generation |
+| `Company.ErrorManagement.Persistence.Sqlite` | .NET 8 | SQLite repositories, migration runner, direct transport |
+| `Company.ErrorManagement.AspNetCore` | .NET 8 | Correlation + exception middleware, DI extensions |
+| `Company.ErrorManagement.EntityFrameworkCore` | .NET 8 | EF Core command interceptor for DB exception capture |
+| `Company.ErrorManagement.WebApi2` | .NET 4.7.2 | Web API 2 global filter + correlation handler |
+| `Company.ErrorManagement.IngestionService` | .NET 8 Web API | Central ingestion host — errors, tickets, reporting, retention |
+| `@company/erp-error-angular` | Angular 20 | Global error handler, HTTP interceptor, ticket service |
+
+---
 
 ## Key Capabilities
 
-* Capture Angular, HTTP, API, business-layer, EF Core, and database errors.
-* Correlate failures across requests, services, application instances, and pods.
-* Prevent duplicate storage when the same event is retried.
-* Group recurring failures using centralized error fingerprinting.
-* Monitor process memory, CPU, thread pressure, request latency, failures, and dependency performance.
-* Start bounded diagnostic sessions when sustained thresholds are exceeded.
-* Temporarily enable detailed logging for a configured duration.
-* Capture traces and memory dumps under controlled limits.
-* Create incidents and support tickets with complete audit history.
-* Generate evidence-based recovery recommendations.
-* Execute approved and guarded recovery actions.
-* Support instance restarts and dependency-specific circuit breaking.
-* Continue application logging when the central service is unavailable.
+- **Non-invasive**: register once per app — no per-page, per-controller, or per-component changes.
+- **Deduplication**: SHA-256 fingerprint groups repeated errors into one definition; each request creates a separate occurrence.
+- **Safe error responses**: stack traces, SQL messages, and connection strings never reach the browser.
+- **Failure isolation**: framework failures never interrupt the host application's normal operation.
+- **Complete ticket lifecycle**: NEW → TRIAGE → ASSIGNED → INVESTIGATING → RESOLVED → CLOSED with immutable audit history.
+- **Retention**: configurable archiving job removes old occurrences on a schedule.
+- **Correlation**: `X-Correlation-ID` flows from Angular through every API and is written to every occurrence and ticket record.
 
-## Architecture
+---
 
-```mermaid
-flowchart TD
-    A["Angular and .NET adapters"] --> B["Central ingestion service"]
-    C["Host and process collectors"] --> B
-    B --> D["Normalization and fingerprinting"]
-    D --> E["Errors tickets and incidents"]
-    D --> F["Diagnostic sessions and artifacts"]
-    E --> G["Recommendation and recovery engine"]
-    F --> G
+## Repository Structure
+
 ```
-
-Application instances continue writing their normal logs and traces. Application adapters send normalized events to the central service asynchronously.
-
-If the central service becomes unavailable, the application continues running and writing its local logs. Central delivery is paused through a circuit breaker, while important events remain in a bounded durable spool for later replay.
-
-A failure in the observability framework must never interrupt the original application operation.
-
-## Error Identity and Deduplication
-
-The framework uses three different identifiers:
-
-| Identifier       | Purpose                                                                                   |
-| ---------------- | ----------------------------------------------------------------------------------------- |
-| `event_id`       | Identifies one failure event and prevents duplicate storage when delivery is retried.     |
-| `fingerprint`    | Groups different occurrences of the same normalized error pattern.                        |
-| `correlation_id` | Connects a request across Angular, APIs, services, database operations, logs, and traces. |
-
-The central service calculates the authoritative fingerprint.
-
-Request IDs, timestamps, user identifiers, generated values, and unstable stack-trace line numbers are excluded from fingerprint calculation.
-
-If the same `event_id` is delivered more than once, only one occurrence is stored. If the same error happens during separate requests, each request creates an occurrence, but all occurrences are grouped under the same error definition.
-
-## Main Components
-
-| Component                 | Responsibility                                                                                              |
-| ------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| Angular adapter           | Global error handling, HTTP interception, correlation propagation, safe notifications, and issue reporting. |
-| Web API 2 adapter         | Global exception capture and safe error responses for .NET Framework 4.7.2 applications.                    |
-| ASP.NET Core adapter      | Middleware, dependency injection, Problem Details integration, and modern .NET diagnostics.                 |
-| Error Management Core     | Redaction, normalization, classification, fingerprinting, and error-reference generation.                   |
-| Central ingestion service | Idempotent event ingestion, occurrence storage, ticketing, incidents, and administrative APIs.              |
-| Monitoring collectors     | Windows Performance Monitor, ETW, modern .NET runtime metrics, application logs, and traces.                |
-| Diagnostic engine         | Threshold evaluation, detailed logging, trace collection, memory dumps, quotas, and retention.              |
-| Recovery engine           | Recommendations, approvals, recovery actions, cooldowns, verification, rollback, and auditing.              |
-
-## Threshold-Triggered Diagnostics
-
-A monitoring rule contains a threshold and a sustained evaluation window. Short-lived spikes do not start expensive diagnostic collection.
-
-When a threshold remains breached, the system can:
-
-1. Open a monitoring incident.
-2. Preserve the configured pre-trigger log context.
-3. Increase diagnostic logging for 15–20 minutes.
-4. Capture an initial trace or memory dump.
-5. Capture a limited number of additional dumps at configured intervals.
-6. Store artifact references, checksums, sizes, access classifications, and retention dates.
-7. Restore the normal logging level automatically when the diagnostic session expires.
-
-Raw log streams, metric time series, traces, and memory-dump files are not stored inside SQLite. They are stored in protected telemetry or artifact storage. SQLite stores their references and lifecycle metadata.
-
-## Controlled Recovery
-
-Recovery begins with an evidence-based recommendation.
-
-Initially, recovery actions should require operator approval. Each action targets one application instance or one explicitly configured dependency.
-
-Every action records:
-
-* Target and reason.
-* Supporting incident evidence.
-* Requester and approver.
-* Preconditions.
-* Idempotency key.
-* Before-and-after health measurements.
-* Cooldown and stop conditions.
-* Execution outcome.
-* Rollback status.
-
-A restart that does not improve the relevant health measurements must not produce a restart loop.
-
-Circuit breakers are integrated into application dependency clients. Central configuration can control them, but they apply only to explicitly configured database operations or external services. Recovery probes determine when normal traffic can resume.
-
-## Central Service Availability
-
-The central service is responsible for:
-
-* Event ingestion.
-* Authoritative fingerprint calculation.
-* Deduplication.
-* Error grouping.
-* Ticket management.
-* Incident orchestration.
-* Diagnostic-session management.
-* Recovery recommendations and actions.
-
-If the central service is unavailable:
-
-1. Applications continue writing their normal logs and traces.
-2. Business requests continue without waiting for central logging.
-3. The transport circuit breaker stops repeated delivery attempts.
-4. Important events remain in a durable local spool.
-5. Recovery probes periodically check the central service.
-6. Queued events are replayed when the service becomes available.
-7. The central database ignores duplicate events using the unique `event_id`.
-
-## Persistence
-
-The initial implementation uses one dedicated SQLite database owned by the central ingestion service.
-
-Application pods must not write directly to the SQLite file. All application instances send their events to the central service.
-
-The database is delivered through ordered migrations:
-
-* `ERP_ErrorManagement_SQLite_v1.sql` creates error, occurrence, ticket, audit, configuration, SLA, retention, and schema-version objects.
-* `ERP_ErrorManagement_SQLite_v2_Observability_Metadata.sql` creates monitored instances, rules, incidents, diagnostic sessions, artifacts, recommendations, recovery actions, and incident events.
-
-The persistence layer uses repository interfaces so SQLite can later be replaced with SQL Server or PostgreSQL.
-
-A production deployment requiring multiple ingestion-service replicas or high write concurrency should use SQL Server or PostgreSQL instead of SQLite.
-
-## Technology Targets
-
-* Angular 20.x
-* ASP.NET Web API 2
-* .NET Framework 4.7.2
-* ASP.NET Core
-* Modern .NET
-* Entity Framework Core
-* SQL Server and PostgreSQL application databases
-* Windows Server and IIS
-* Docker and Kubernetes
-* SQLite for the initial central repository
-
-## Security Principles
-
-* Redact passwords, tokens, cookies, authorization headers, connection strings, and sensitive fields before transport.
-* Do not capture request bodies, response bodies, or SQL parameter values by default.
-* Restrict technical diagnostics to authorized support and engineering users.
-* Treat memory dumps as restricted data because they may contain credentials or personal information.
-* Apply artifact size, count, access, and retention limits.
-* Keep credentials in the host secret store instead of the framework database.
-* Ensure that failures in logging, monitoring, or persistence do not replace the original application response.
-
-## Planned Repository Structure
-
-```text
 src/
-  contracts/
-  core/
-  ingestion-service/
-  persistence-sqlite/
-  webapi2-adapter/
-  aspnetcore-adapter/
-  monitoring-agent/
-  diagnostics/
-  recovery/
-  angular/
+  Company.ErrorManagement.Contracts/      .NET Standard 2.0 — shared types
+  Company.ErrorManagement.Core/           .NET Standard 2.0 — core logic
+  Company.ErrorManagement.Persistence.Sqlite/  .NET 8 — SQLite persistence
+  Company.ErrorManagement.AspNetCore/     .NET 8 — Core middleware
+  Company.ErrorManagement.EntityFrameworkCore/  .NET 8 — EF Core interceptor
+  Company.ErrorManagement.WebApi2/        .NET 4.7.2 — Web API 2 adapter
+  Company.ErrorManagement.IngestionService/    .NET 8 Web API — central host
+  angular/erp-error-angular/             Angular 20 npm library
 
 database/
   migrations/
+    V001__initial_schema.sql             Errors, tickets, audit, SLA, config
+    V002__observability_metadata.sql     Monitoring, recovery, diagnostics
+  seed/
+    seed_reference_data.sql             Environments, severities, queues, statuses
 
 tests/
-  unit/
-  integration/
-  compatibility/
+  Company.ErrorManagement.Core.Tests/
+  Company.ErrorManagement.Persistence.Sqlite.Tests/
+  Company.ErrorManagement.AspNetCore.Tests/
 
 docs/
-  architecture/
-  deployment/
-  security/
+  installation/
+    README.md                           Full installation and integration guide
+    scripts/
+      setup-database.ps1               Create DB, apply migrations, seed data
+      build-solution.ps1               Restore and build .NET solution
+      start-ingestion-service.ps1      Start the ingestion service
+      run-tests.ps1                    Run all test projects
+      build-angular-library.ps1        Compile the Angular npm library
+  03_Implementation_Architecture_and_Delivery_Plan.md
 ```
 
-## Delivery Plan
+---
 
-The project will be delivered as one integrated release through internal development checkpoints:
+## Integration in 3 Steps
 
-1. Architecture proof of concept and central ingestion.
-2. Complete SQLite schema and repository layer.
-3. Normalization, redaction, fingerprinting, and durable event delivery.
-4. Web API 2, ASP.NET Core, Angular, and database adapters.
-5. Ticketing, auditing, reporting, and administration.
-6. Host and process monitoring.
-7. Threshold-triggered diagnostic capture.
-8. Recommendations and guarded recovery.
-9. Security, resilience, performance, compatibility, and rollout validation.
+### Angular 20
 
-There is no error-only production release. The initial release is complete only after both error-management and monitoring/recovery acceptance criteria pass.
+```typescript
+// app.config.ts — one change, nothing else needed
+export const appConfig: ApplicationConfig = {
+  providers: [
+    provideHttpClient(
+      withInterceptors([erpCorrelationInterceptor, erpErrorHttpInterceptor])
+    ),
+    provideErpErrorManagement({
+      applicationName: 'MainERP',
+      environment: 'PROD',
+      clientErrorEndpoint: '/api/error-management/client-errors',
+    }),
+  ],
+};
+```
 
-## Contributing
+### ASP.NET Web API 2 (.NET 4.7.2)
 
-The contribution workflow will be documented after the initial repository structure and public interfaces become stable.
+```csharp
+// WebApiConfig.cs — add after existing setup
+ErrorManagementConfig.Register(config, reporter, correlationContext, options => {
+    options.ApplicationName = "MainERP";
+    options.EnvironmentName = "Production";
+});
+```
 
-Until then, use GitHub issues to propose features, report defects, or discuss architectural decisions.
+### ASP.NET Core (.NET 8)
+
+```csharp
+// Program.cs
+builder.Services.AddErpErrorManagement(o => { o.ApplicationName = "ModernERP"; o.EnvironmentName = "Production"; });
+builder.Services.AddErrorManagementSqlite(o => { o.ConnectionString = connectionString; });
+app.UseErpCorrelation();
+app.UseErpExceptionHandling();
+```
+
+---
+
+## REST API (Ingestion Service)
+
+| Method | Endpoint | Description |
+|---|---|---|
+| `POST` | `/api/error-management/events` | Ingest a server error |
+| `POST` | `/api/error-management/client-errors` | Ingest an Angular error |
+| `POST` | `/api/tickets` | Create a ticket |
+| `GET` | `/api/tickets/{id}` | Get ticket |
+| `GET` | `/api/tickets` | Search tickets |
+| `POST` | `/api/tickets/{id}/assign` | Assign ticket |
+| `POST` | `/api/tickets/{id}/status` | Change status |
+| `POST` | `/api/tickets/{id}/comments` | Add comment |
+| `POST` | `/api/tickets/{id}/resolve` | Resolve ticket |
+| `GET` | `/api/tickets/{id}/history` | Status audit trail |
+| `GET` | `/api/reports/top-errors` | Top recurring errors |
+| `GET` | `/api/reports/queue-stats` | Ticket counts by queue and status |
+| `GET` | `/health` | Health check |
+
+---
+
+## Detailed Documentation
+
+See **[docs/installation/README.md](docs/installation/README.md)** for:
+- Full prerequisites list
+- Step-by-step database, service, Angular, Web API 2, and .NET 8 setup
+- All configuration options
+- Schema upgrade instructions
+- Troubleshooting common problems
+
+---
+
+## Architecture Overview
+
+```mermaid
+flowchart TD
+    A["Angular adapter\n(global error + HTTP interceptor)"] --> B["Ingestion Service\n(http://localhost:5080)"]
+    C["Web API 2 adapter\n(global filter + correlation handler)"] --> B
+    D["ASP.NET Core adapter\n(middleware)"] --> B
+    E["EF Core interceptor\n(DB exceptions)"] --> B
+    B --> F["Core library\n(normalize, redact, fingerprint)"]
+    F --> G["SQLite persistence\n(error_definition + error_occurrence)"]
+    G --> H["Ticket lifecycle\n(create, assign, resolve, audit)"]
+    H --> I["Reporting\n(top errors, queue stats, retention)"]
+```
+
+---
+
+## Technology Targets
+
+- Angular 20.x
+- ASP.NET Web API 2 / .NET Framework 4.7.2
+- ASP.NET Core / .NET 8
+- Entity Framework Core 8
+- SQLite (initial); SQL Server or PostgreSQL (production upgrade path)
+- Windows Server / IIS
+- Docker / Kubernetes (future)
+
+---
 
 ## License
 

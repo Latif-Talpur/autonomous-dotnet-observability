@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <RootNamespace>Company.ErrorManagement.Contracts</RootNamespace>
+    <AssemblyName>Company.ErrorManagement.Contracts</AssemblyName>
+    <PackageId>Company.ErrorManagement.Contracts</PackageId>
+    <Description>Shared contracts, envelope, receipt, and interfaces for the ERP Error Management framework.</Description>
+  </PropertyGroup>
+</Project>

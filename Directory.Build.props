@@ -1,0 +1,12 @@
+<Project>
+  <PropertyGroup>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <Company>Company</Company>
+    <Product>ERP Error Management</Product>
+    <Version>0.1.0</Version>
+    <NeutralLanguage>en-US</NeutralLanguage>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+  </PropertyGroup>
+</Project>

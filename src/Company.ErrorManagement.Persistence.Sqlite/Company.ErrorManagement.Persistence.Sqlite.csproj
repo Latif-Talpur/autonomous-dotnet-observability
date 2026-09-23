@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>Company.ErrorManagement.Persistence.Sqlite</RootNamespace>
+    <AssemblyName>Company.ErrorManagement.Persistence.Sqlite</AssemblyName>
+    <PackageId>Company.ErrorManagement.Persistence.Sqlite</PackageId>
+    <Description>SQLite persistence provider, repositories, and migration runner for the ERP Error Management framework.</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.10" />
+    <PackageReference Include="Dapper" Version="2.1.35" />
+    <PackageReference Include="Microsoft.Extensions.Options" Version="8.0.2" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Company.ErrorManagement.Contracts\Company.ErrorManagement.Contracts.csproj" />
+    <ProjectReference Include="..\Company.ErrorManagement.Core\Company.ErrorManagement.Core.csproj" />
+  </ItemGroup>
+</Project>

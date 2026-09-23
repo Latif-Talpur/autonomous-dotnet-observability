@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <RootNamespace>Company.ErrorManagement.Core</RootNamespace>
+    <AssemblyName>Company.ErrorManagement.Core</AssemblyName>
+    <PackageId>Company.ErrorManagement.Core</PackageId>
+    <Description>Normalization, redaction, fingerprinting, classification, and reference generation for the ERP Error Management framework.</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Company.ErrorManagement.Contracts\Company.ErrorManagement.Contracts.csproj" />
+  </ItemGroup>
+</Project>

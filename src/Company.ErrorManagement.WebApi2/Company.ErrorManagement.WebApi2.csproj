@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net472</TargetFramework>
+    <RootNamespace>Company.ErrorManagement.WebApi2</RootNamespace>
+    <AssemblyName>Company.ErrorManagement.WebApi2</AssemblyName>
+    <PackageId>Company.ErrorManagement.WebApi2</PackageId>
+    <Description>ASP.NET Web API 2 adapter for .NET Framework 4.7.2 hosts.</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNet.WebApi.Core" Version="5.3.0" />
+    <PackageReference Include="Microsoft.AspNet.WebApi.Client" Version="5.3.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Company.ErrorManagement.Contracts\Company.ErrorManagement.Contracts.csproj" />
+    <ProjectReference Include="..\Company.ErrorManagement.Core\Company.ErrorManagement.Core.csproj" />
+  </ItemGroup>
+</Project>

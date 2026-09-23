@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>Company.ErrorManagement.IngestionService</RootNamespace>
+    <AssemblyName>Company.ErrorManagement.IngestionService</AssemblyName>
+    <UserSecretsId>erp-error-management-ingestion</UserSecretsId>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Company.ErrorManagement.Contracts\Company.ErrorManagement.Contracts.csproj" />
+    <ProjectReference Include="..\Company.ErrorManagement.Core\Company.ErrorManagement.Core.csproj" />
+    <ProjectReference Include="..\Company.ErrorManagement.AspNetCore\Company.ErrorManagement.AspNetCore.csproj" />
+    <ProjectReference Include="..\Company.ErrorManagement.Persistence.Sqlite\Company.ErrorManagement.Persistence.Sqlite.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="6.7.1" />
+  </ItemGroup>
+</Project>

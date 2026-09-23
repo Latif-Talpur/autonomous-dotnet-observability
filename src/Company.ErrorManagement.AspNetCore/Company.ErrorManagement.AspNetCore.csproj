@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <RootNamespace>Company.ErrorManagement.AspNetCore</RootNamespace>
+    <AssemblyName>Company.ErrorManagement.AspNetCore</AssemblyName>
+    <PackageId>Company.ErrorManagement.AspNetCore</PackageId>
+    <Description>ASP.NET Core 8 middleware, DI extensions, and Problem Details integration for the ERP Error Management framework.</Description>
+  </PropertyGroup>
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Company.ErrorManagement.Contracts\Company.ErrorManagement.Contracts.csproj" />
+    <ProjectReference Include="..\Company.ErrorManagement.Core\Company.ErrorManagement.Core.csproj" />
+  </ItemGroup>
+</Project>
